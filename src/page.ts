@@ -153,36 +153,43 @@ export function pageHtml(): string {
 
   <section id="tab-entry">
     <form id="form" class="card" autocomplete="off">
-      <div class="card-title"><span id="formTitle">新增喂养记录</span>
+      <div class="card-title"><span id="formTitle">新增记录</span>
         <button type="button" id="cancelEdit" class="link" hidden>取消编辑</button>
         <button type="button" id="resetNow" class="link">重置为当前时间</button>
       </div>
-      <div class="field"><span>喂奶时间</span><div class="dt"><input type="date" id="feedTimeDate" required /><input type="time" id="feedTimeTime" required /></div></div>
-      <div class="field"><span>喂养方式</span>
-        <div class="seg" id="typeSeg">
-          <button type="button" data-type="breast">母乳</button>
-          <button type="button" data-type="formula">奶粉</button>
-          <button type="button" data-type="mixed">混合</button>
+      <div class="field"><span>醒来时间</span><div class="dt"><input type="date" id="wakeTimeDate" required /><input type="time" id="wakeTimeTime" required /></div></div>
+      <div class="field"><span>本次是否喂养</span>
+        <div class="toggles" style="margin-bottom:0">
+          <label class="toggle"><input type="checkbox" id="isFed" checked /><span>喂养</span></label>
         </div>
       </div>
-      <div class="field" id="sideRow"><span>母乳喂养侧</span>
-        <div class="seg" id="sideSeg">
-          <button type="button" data-side="left">左边</button>
-          <button type="button" data-side="right">右边</button>
-          <button type="button" data-side="both">两边</button>
+      <div id="feedFields">
+        <div class="field"><span>喂养方式</span>
+          <div class="seg" id="typeSeg">
+            <button type="button" data-type="breast">母乳</button>
+            <button type="button" data-type="formula">奶粉</button>
+            <button type="button" data-type="mixed">混合</button>
+          </div>
         </div>
-      </div>
-      <div class="field" id="mlRow"><span>奶粉量 (ml)</span>
-        <input type="number" id="formulaMl" min="0" max="1000" step="5" inputmode="numeric" />
-        <div class="chips" data-target="formulaMl"><button type="button">30</button><button type="button">60</button><button type="button">90</button><button type="button">120</button><button type="button">150</button><button type="button">180</button></div>
-      </div>
-      <div class="field"><span>喂养时长 (分钟)</span>
-        <div class="stepper" data-target="feedMinutes">
-          <button type="button" data-step="-1">-1</button>
-          <input type="number" id="feedMinutes" min="0" max="600" inputmode="numeric" placeholder="可选" />
-          <button type="button" data-step="1">+1</button>
+        <div class="field" id="sideRow"><span>母乳喂养侧</span>
+          <div class="seg" id="sideSeg">
+            <button type="button" data-side="left">左边</button>
+            <button type="button" data-side="right">右边</button>
+            <button type="button" data-side="both">两边</button>
+          </div>
         </div>
-        <div class="chips" data-target="feedMinutes"><button type="button">5</button><button type="button">10</button><button type="button">15</button><button type="button">20</button><button type="button">25</button><button type="button">30</button><button type="button">40</button></div>
+        <div class="field" id="mlRow"><span>奶粉量 (ml)</span>
+          <input type="number" id="formulaMl" min="0" max="1000" step="5" inputmode="numeric" />
+          <div class="chips" data-target="formulaMl"><button type="button">30</button><button type="button">60</button><button type="button">90</button><button type="button">120</button><button type="button">150</button><button type="button">180</button></div>
+        </div>
+        <div class="field"><span>喂养时长 (分钟)</span>
+          <div class="stepper" data-target="feedMinutes">
+            <button type="button" data-step="-1">-1</button>
+            <input type="number" id="feedMinutes" min="0" max="600" inputmode="numeric" placeholder="可选" />
+            <button type="button" data-step="1">+1</button>
+          </div>
+          <div class="chips" data-target="feedMinutes"><button type="button">5</button><button type="button">10</button><button type="button">15</button><button type="button">20</button><button type="button">25</button><button type="button">30</button><button type="button">40</button></div>
+        </div>
       </div>
       <div class="toggles">
         <label class="toggle"><input type="checkbox" id="diaper" /><span>换尿不湿</span></label>
@@ -241,7 +248,7 @@ export function pageHtml(): string {
   var TOKEN_KEY = 'feeding_api_token';
   var TYPE_NAME = { breast: '母乳', formula: '奶粉', mixed: '混合' };
   var SIDE_NAME = { left: '左边', right: '右边', both: '两边' };
-  var state = { type: 'breast', side: null, editingId: null, records: [], hasMore: false, days: 7, tab: 'entry', historyLoaded: false };
+  var state = { isFed: true, type: 'breast', side: null, editingId: null, records: [], hasMore: false, days: 7, tab: 'entry', historyLoaded: false };
 
   function $(id) { return document.getElementById(id); }
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -315,6 +322,11 @@ export function pageHtml(): string {
   }
 
   // ---------- 录入表单 ----------
+  function setFed(fed) {
+    state.isFed = fed;
+    $('isFed').checked = fed;
+    $('feedFields').hidden = !fed;
+  }
   function setType(t) {
     state.type = t;
     document.querySelectorAll('#typeSeg button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-type') === t); });
@@ -334,6 +346,7 @@ export function pageHtml(): string {
   document.querySelectorAll('#typeSeg button').forEach(function (b) {
     b.addEventListener('click', function () { setType(b.getAttribute('data-type')); });
   });
+  $('isFed').addEventListener('change', function () { setFed($('isFed').checked); });
   document.querySelectorAll('.chips').forEach(function (box) {
     box.addEventListener('click', function (e) {
       if (e.target.tagName !== 'BUTTON') return;
@@ -353,27 +366,28 @@ export function pageHtml(): string {
   $('poop').addEventListener('change', function () { if ($('poop').checked) $('diaper').checked = true; });
 
   function updateAwakeHint() {
-    var f = getDT('feedTime'), s = getDT('sleepTime');
-    $('awakeHint').textContent = f && s ? (s < f ? '睡觉时间早于喂奶时间' : '醒着 ' + dur((s - f) / 60000)) : '';
+    var w = getDT('wakeTime'), s = getDT('sleepTime');
+    $('awakeHint').textContent = w && s ? (s < w ? '睡觉时间早于醒来时间' : '醒着 ' + dur((s - w) / 60000)) : '';
   }
-  ['feedTimeDate', 'feedTimeTime', 'sleepTimeDate', 'sleepTimeTime'].forEach(function (id) { $(id).addEventListener('input', updateAwakeHint); });
+  ['wakeTimeDate', 'wakeTimeTime', 'sleepTimeDate', 'sleepTimeTime'].forEach(function (id) { $(id).addEventListener('input', updateAwakeHint); });
 
   function resetTimes() {
     var now = Date.now();
-    setDT('feedTime', now);
+    setDT('wakeTime', now);
     setDT('sleepTime', now + 30 * 60000);
     updateAwakeHint();
   }
   function resetForm() {
     state.editingId = null;
     resetTimes();
+    setFed(true);
     setType('breast');
     setSide(null);
     $('feedMinutes').value = '10';
     $('diaper').checked = true;
     $('poop').checked = false;
     $('remark').value = '';
-    $('formTitle').textContent = '新增喂养记录';
+    $('formTitle').textContent = '新增记录';
     $('submitBtn').textContent = '保存记录';
     $('cancelEdit').hidden = true;
     $('resetNow').hidden = false;
@@ -385,8 +399,9 @@ export function pageHtml(): string {
     var r = state.records.find(function (x) { return x.id === id; });
     if (!r) return;
     state.editingId = id;
-    setDT('feedTime', r.feed_time);
+    setDT('wakeTime', r.wake_time);
     setDT('sleepTime', r.sleep_time);
+    setFed(!!r.is_fed);
     setType(r.feed_type);
     setSide(r.breast_side || null);
     $('formulaMl').value = String(r.formula_ml);
@@ -414,7 +429,8 @@ export function pageHtml(): string {
   $('form').addEventListener('submit', async function (e) {
     e.preventDefault();
     var body = {
-      feed_time: getDT('feedTime'),
+      wake_time: getDT('wakeTime'),
+      is_fed: state.isFed,
       feed_type: state.type,
       breast_side: state.type === 'formula' ? null : state.side,
       formula_ml: Number($('formulaMl').value || 0),
@@ -424,9 +440,9 @@ export function pageHtml(): string {
       sleep_time: getDT('sleepTime'),
       remark: $('remark').value
     };
-    if (!body.feed_time || !body.sleep_time) return toast('请填写时间', true);
-    if (body.sleep_time < body.feed_time) return toast('睡觉时间不能早于喂奶时间', true);
-    if (state.type !== 'breast' && !(body.formula_ml > 0)) return toast('请填写奶粉量', true);
+    if (!body.wake_time || !body.sleep_time) return toast('请填写时间', true);
+    if (body.sleep_time < body.wake_time) return toast('睡觉时间不能早于醒来时间', true);
+    if (state.isFed && state.type !== 'breast' && !(body.formula_ml > 0)) return toast('请填写奶粉量', true);
 
     var btn = $('submitBtn');
     btn.disabled = true;
@@ -455,7 +471,7 @@ export function pageHtml(): string {
   function renderStatus(data) {
     var last = data.last, now = Date.now();
     if (!last) { $('statusCard').innerHTML = '还没有记录，快来添加第一条吧'; return; }
-    var html = '上次喂奶 <b>' + hm(last.feed_time) + '</b>（' + dur((now - last.feed_time) / 60000) + '前）';
+    var html = '上次醒来 <b>' + hm(last.wake_time) + '</b>（' + dur((now - last.wake_time) / 60000) + '前）';
     if (last.sleep_time <= now) html += '<br>已睡 <b>' + dur((now - last.sleep_time) / 60000) + '</b>（' + hm(last.sleep_time) + ' 入睡）';
     else html += '<br>预计 ' + hm(last.sleep_time) + ' 入睡';
     var t = data.daily[data.daily.length - 1];
@@ -468,7 +484,7 @@ export function pageHtml(): string {
 
   // ---------- 历史记录 ----------
   async function loadHistory(reset) {
-    var before = reset || !state.records.length ? 0 : state.records[state.records.length - 1].feed_time;
+    var before = reset || !state.records.length ? 0 : state.records[state.records.length - 1].wake_time;
     try {
       var data = await api('/api/records?limit=20' + (before ? '&before=' + before : ''));
       state.records = reset ? data.records : state.records.concat(data.records);
@@ -486,29 +502,32 @@ export function pageHtml(): string {
     if (!state.records.length) { box.innerHTML = '<div class="card empty">暂无记录</div>'; return; }
     var now = Date.now(), groups = [], map = {};
     state.records.forEach(function (r) {
-      var k = dayKey(r.feed_time);
-      if (!map[k]) { map[k] = { key: k, items: [], ml: 0 }; groups.push(map[k]); }
+      var k = dayKey(r.wake_time);
+      if (!map[k]) { map[k] = { key: k, items: [], feeds: 0, ml: 0 }; groups.push(map[k]); }
       map[k].items.push(r);
-      map[k].ml += r.formula_ml;
+      if (r.is_fed) {
+        map[k].feeds++;
+        map[k].ml += r.formula_ml;
+      }
     });
     box.innerHTML = groups.map(function (g) {
-      return '<div class="day-head"><span>' + g.key + '</span><span>' + g.items.length + ' 次 · 奶粉 ' + g.ml + 'ml</span></div>'
+      return '<div class="day-head"><span>' + g.key + '</span><span>' + g.items.length + ' 条 · 喂养 ' + g.feeds + ' 次 · 奶粉 ' + g.ml + 'ml</span></div>'
         + '<div class="card" style="padding:0;overflow:hidden">' + g.items.map(function (r) { return recordHtml(r, now); }).join('') + '</div>';
     }).join('');
   }
   function recordHtml(r, now) {
-    var tags = '<span class="tag pink">' + TYPE_NAME[r.feed_type] + '</span>';
-    if (r.breast_side) tags += '<span class="tag pink">' + SIDE_NAME[r.breast_side] + '</span>';
-    if (r.formula_ml) tags += '<span class="tag blue">' + r.formula_ml + 'ml</span>';
-    if (r.feed_minutes != null) tags += '<span class="tag">喂 ' + r.feed_minutes + ' 分钟</span>';
+    var tags = r.is_fed ? '<span class="tag pink">' + TYPE_NAME[r.feed_type] + '</span>' : '<span class="tag">未喂养</span>';
+    if (r.is_fed && r.breast_side) tags += '<span class="tag pink">' + SIDE_NAME[r.breast_side] + '</span>';
+    if (r.is_fed && r.formula_ml) tags += '<span class="tag blue">' + r.formula_ml + 'ml</span>';
+    if (r.is_fed && r.feed_minutes != null) tags += '<span class="tag">喂 ' + r.feed_minutes + ' 分钟</span>';
     if (r.diaper_changed) tags += '<span class="tag green">换尿布</span>';
     if (r.pooped) tags += '<span class="tag amber">臭臭</span>';
     var sleep;
-    if (r.next_feed_time != null) sleep = '睡眠 ' + dur((r.next_feed_time - r.sleep_time) / 60000) + '（至 ' + hm(r.next_feed_time) + '）';
+    if (r.next_wake_time != null) sleep = '睡眠 ' + dur((r.next_wake_time - r.sleep_time) / 60000) + '（至 ' + hm(r.next_wake_time) + '）';
     else if (r.sleep_time <= now) sleep = '睡眠中，已睡 ' + dur((now - r.sleep_time) / 60000);
     else sleep = '预计 ' + hm(r.sleep_time) + ' 入睡';
     return '<div class="swipe"><button class="del" data-del="' + r.id + '">删除</button><div class="rec" data-id="' + r.id + '">'
-      + '<div class="time">' + hm(r.feed_time) + '<small>' + hm(r.sleep_time) + ' 睡</small></div>'
+      + '<div class="time">' + hm(r.wake_time) + '<small>' + hm(r.sleep_time) + ' 睡</small></div>'
       + '<div class="body"><div>' + tags + '</div><div>' + sleep + '</div>'
       + (r.remark ? '<div class="remark">' + esc(r.remark) + '</div>' : '') + '</div>'
       + '<div class="ops"><button class="link" data-edit="' + r.id + '">编辑</button></div>'
@@ -576,22 +595,24 @@ export function pageHtml(): string {
     var r = state.records[idx];
     if (!r) return;
     var prev = state.records[idx + 1], now = Date.now();
-    var html = kv('喂奶时间', fullTime(r.feed_time)) + kv('喂养方式', TYPE_NAME[r.feed_type]);
-    if (r.feed_type !== 'formula') html += kv('母乳喂养侧', r.breast_side ? SIDE_NAME[r.breast_side] : '未记录');
-    if (r.feed_type !== 'breast') html += kv('奶粉量', r.formula_ml + ' ml');
-    html += kv('喂养时长', r.feed_minutes != null ? r.feed_minutes + ' 分钟' : '未记录')
-      + kv('换尿不湿', r.diaper_changed ? '是' : '否')
+    var html = kv('醒来时间', fullTime(r.wake_time)) + kv('是否喂养', r.is_fed ? '是' : '否');
+    if (r.is_fed) {
+      html += kv('喂养方式', TYPE_NAME[r.feed_type]);
+      if (r.feed_type !== 'formula') html += kv('母乳喂养侧', r.breast_side ? SIDE_NAME[r.breast_side] : '未记录');
+      if (r.feed_type !== 'breast') html += kv('奶粉量', r.formula_ml + ' ml');
+      html += kv('喂养时长', r.feed_minutes != null ? r.feed_minutes + ' 分钟' : '未记录');
+    }
+    html += kv('换尿不湿', r.diaper_changed ? '是' : '否')
       + kv('拉臭臭', r.pooped ? '是' : '否')
       + kv('睡觉时间', fullTime(r.sleep_time))
-      + kv('醒着时长', dur((r.sleep_time - r.feed_time) / 60000));
-    if (r.next_feed_time != null) {
-      html += kv('睡眠时长', dur((r.next_feed_time - r.sleep_time) / 60000))
-        + kv('醒来时间', fullTime(r.next_feed_time))
-        + kv('距下次喂奶', dur((r.next_feed_time - r.feed_time) / 60000));
+      + kv('醒着时长', dur((r.sleep_time - r.wake_time) / 60000));
+    if (r.next_wake_time != null) {
+      html += kv('睡眠时长', dur((r.next_wake_time - r.sleep_time) / 60000))
+        + kv('下次醒来时间', fullTime(r.next_wake_time));
     } else if (r.sleep_time <= now) {
       html += kv('睡眠时长', '睡眠中，已睡 ' + dur((now - r.sleep_time) / 60000));
     }
-    if (prev) html += kv('距上次喂奶', dur((r.feed_time - prev.feed_time) / 60000));
+    if (prev) html += kv('距上次醒来', dur((r.wake_time - prev.wake_time) / 60000));
     if (r.remark) html += kv('备注', esc(r.remark));
     html += kv('记录于', dbTime(r.created_at));
     if (r.updated_at !== r.created_at) html += kv('修改于', dbTime(r.updated_at));
@@ -638,7 +659,7 @@ export function pageHtml(): string {
 
   function renderStats(data) {
     var s = data.summary;
-    if (!s.totalFeeds) {
+    if (!s.totalRecords) {
       $('summary').innerHTML = '<div class="card empty">该时间段暂无记录</div>';
       $('charts').innerHTML = '';
       return;
@@ -655,7 +676,7 @@ export function pageHtml(): string {
       + metric('平均喂奶间隔', dur(s.avgIntervalMinutes), '')
       + metric('最长连续睡眠', dur(s.longestSleepMinutes), '')
       + '</div>'
-      + '<div class="card" style="font-size:13px;color:var(--muted)">共 ' + s.totalFeeds + ' 次喂养：母乳 ' + s.breastCount
+      + '<div class="card" style="font-size:13px;color:var(--muted)">共 ' + s.totalRecords + ' 条记录，喂养 ' + s.totalFeeds + ' 次：母乳 ' + s.breastCount
       + ' · 奶粉 ' + s.formulaCount + ' · 混合 ' + s.mixedCount + '，奶粉合计 ' + s.totalFormulaMl + 'ml'
       + (single ? '' : '；日均按有记录的 ' + s.activeDays + ' 天计算') + '</div>';
 
