@@ -1,0 +1,22 @@
+name = "feeding-record"
+main = "src/index.ts"
+compatibility_date = "2026-05-09"
+# 部署时保留在 Dashboard 上配置的变量，否则会被 wrangler.toml 覆盖清空
+keep_vars = true
+
+# D1 数据库绑定
+# 创建数据库: npx wrangler d1 create feeding-db ，将返回的 database_id 填入下方
+# 建表迁移:
+#   本地: npm run db:migrate:local
+#   线上: npm run db:migrate:remote
+[[d1_databases]]
+binding = "DB"
+database_name = "feeding-db"
+database_id = "b834356e-7c34-475a-9e94-cb4529ec6e03"
+migrations_dir = "migrations"
+
+# 访问口令: npx wrangler secret put API_TOKEN （本地开发写入 .dev.vars）
+
+[observability.logs]
+enabled = false
+invocation_logs = false
