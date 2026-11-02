@@ -112,7 +112,7 @@ function parseInput(body: unknown): RecordInput | string {
 // 分页列表（按喂奶时间倒序），before 为游标
 router.get('/records', async (c) => {
   const before = clampInt(c.req.query('before'), 0, Number.MAX_SAFE_INTEGER, 0)
-  const limit = clampInt(c.req.query('limit'), 1, 200, 50)
+  const limit = clampInt(c.req.query('limit'), 1, 200, 20)
   const stmt = before > 0
     ? c.env.DB.prepare(`${SELECT_WITH_NEXT} WHERE feed_time < ? ORDER BY feed_time DESC, id DESC LIMIT ?`).bind(before, limit)
     : c.env.DB.prepare(`${SELECT_WITH_NEXT} ORDER BY feed_time DESC, id DESC LIMIT ?`).bind(limit)

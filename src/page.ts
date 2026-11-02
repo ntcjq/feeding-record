@@ -470,7 +470,7 @@ export function pageHtml(): string {
   async function loadHistory(reset) {
     var before = reset || !state.records.length ? 0 : state.records[state.records.length - 1].feed_time;
     try {
-      var data = await api('/api/records?limit=50' + (before ? '&before=' + before : ''));
+      var data = await api('/api/records?limit=20' + (before ? '&before=' + before : ''));
       state.records = reset ? data.records : state.records.concat(data.records);
       state.hasMore = data.hasMore;
       state.historyLoaded = true;
