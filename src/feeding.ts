@@ -180,8 +180,9 @@ router.get('/stats', async (c) => {
   const offset = tz * MINUTE
   const now = Date.now()
   const todayStart = Math.floor((now + offset) / DAY) * DAY - offset
-  const rangeStart = todayStart - (days - 1) * DAY
-  const rangeEnd = todayStart + DAY
+  // “今天”统计当天；多日统计只取已经结束的完整自然日，避免当天未完整造成偏差
+  const rangeEnd = days === 1 ? todayStart + DAY : todayStart
+  const rangeStart = days === 1 ? todayStart : rangeEnd - days * DAY
 
   // 区间内的记录 + 区间开始前、睡眠跨入区间的那条记录
   const [{ results: rows }, { results: fedRows }, last] = await Promise.all([
