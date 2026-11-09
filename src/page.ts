@@ -30,10 +30,14 @@ export function pageHtml(): string {
   .wrap { max-width: 640px; margin: 0 auto; padding: 0 max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right)); }
   .hero { padding: calc(14px + env(safe-area-inset-top)) 0 12px; }
   .hero h1 { font-size: 19px; margin: 0 0 10px; }
-  .status { background: linear-gradient(135deg, #ff8fa3, #ffb38a); color: #fff; border-radius: var(--radius);
+  .status { position: relative; display: block; width: 100%; border: 0; text-align: left;
+    background: linear-gradient(135deg, #ff8fa3, #ffb38a); color: #fff; border-radius: var(--radius);
     padding: 12px 14px; box-shadow: var(--shadow); line-height: 1.7; font-size: 14px; }
+  .status.editable { padding-right: 82px; cursor: pointer; }
+  .status.editable::after { content: "编辑最新"; position: absolute; top: 12px; right: 14px; padding: 2px 8px;
+    border: 1px solid rgba(255,255,255,.55); border-radius: 999px; font-size: 12px; line-height: 1.6; font-weight: 600; }
   .status b { font-size: 17px; }
-  .status .sub { opacity: .92; font-size: 13px; }
+  .status .sub { display: block; opacity: .92; font-size: 13px; }
   /* 底部标签栏，单手拇指可达 */
   .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; background: rgba(255,255,255,.96);
     -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid var(--line);
@@ -97,7 +101,8 @@ export function pageHtml(): string {
   .rec .time small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
   .rec .body { flex: 1; min-width: 0; font-size: 14px; line-height: 1.7; }
   .rec .ops { display: flex; flex-direction: column; justify-content: center; }
-  .rec .ops .link { padding: 10px 6px; }
+  .edit-btn { min-width: 52px; height: 34px; padding: 0 12px; border: 1px solid #ffc7d3; border-radius: 9px;
+    background: var(--primary-soft); color: var(--primary); font-size: 14px; font-weight: 700; cursor: pointer; }
   .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; margin-right: 4px; background: #f3eef0; color: var(--muted); }
   .tag.pink { background: var(--primary-soft); color: var(--primary); }
   .tag.blue { background: #e6eefc; color: var(--blue); }
@@ -142,7 +147,7 @@ export function pageHtml(): string {
 <body>
 <div class="wrap">
   <header class="hero">
-    <div id="statusCard" class="status">加载中…</div>
+    <button type="button" id="statusCard" class="status">加载中…</button>
   </header>
 
   <nav class="tabs">
@@ -395,10 +400,8 @@ export function pageHtml(): string {
   $('resetNow').addEventListener('click', resetTimes);
   $('cancelEdit').addEventListener('click', function () { resetForm(); switchTab('history'); });
 
-  function editRecord(id) {
-    var r = state.records.find(function (x) { return x.id === id; });
-    if (!r) return;
-    state.editingId = id;
+  function openEditor(r) {
+    state.editingId = r.id;
     setDT('wakeTime', r.wake_time);
     setDT('sleepTime', r.sleep_time);
     setFed(!!r.is_fed);
@@ -416,6 +419,10 @@ export function pageHtml(): string {
     updateAwakeHint();
     switchTab('entry');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function editRecord(id) {
+    var r = state.records.find(function (x) { return x.id === id; });
+    if (r) openEditor(r);
   }
 
   async function deleteRecord(id) {
@@ -466,21 +473,32 @@ export function pageHtml(): string {
     try {
       var data = await api('/api/stats?days=1&tz=' + (-new Date().getTimezoneOffset()));
       renderStatus(data);
-    } catch (e) { $('statusCard').textContent = e.message; }
+    } catch (e) {
+      $('statusCard').classList.remove('editable');
+      $('statusCard').textContent = e.message;
+    }
   }
   function renderStatus(data) {
     var last = data.last, now = Date.now();
+    $('statusCard').classList.toggle('editable', !!last);
     if (!last) { $('statusCard').innerHTML = '还没有记录，快来添加第一条吧'; return; }
     var html = '上次醒来 <b>' + hm(last.wake_time) + '</b>（' + dur((now - last.wake_time) / 60000) + '前）';
     if (last.sleep_time <= now) html += '<br>已睡 <b>' + dur((now - last.sleep_time) / 60000) + '</b>（' + hm(last.sleep_time) + ' 入睡）';
     else html += '<br>预计 ' + hm(last.sleep_time) + ' 入睡';
     var t = data.daily[data.daily.length - 1];
     if (t) {
-      html += '<div class="sub">今日：喂奶 ' + t.feedCount + ' 次 · 奶粉 ' + t.formulaMl + 'ml · 睡眠 ' + dur(t.sleepMinutes)
-        + ' · 尿布 ' + t.diaperCount + ' · 臭臭 ' + t.poopCount + '</div>';
+      html += '<span class="sub">今日：喂奶 ' + t.feedCount + ' 次 · 奶粉 ' + t.formulaMl + 'ml · 睡眠 ' + dur(t.sleepMinutes)
+        + ' · 尿布 ' + t.diaperCount + ' · 臭臭 ' + t.poopCount + '</span>';
     }
     $('statusCard').innerHTML = html;
   }
+  $('statusCard').addEventListener('click', async function () {
+    try {
+      var data = await api('/api/records?limit=1');
+      if (!data.records.length) return toast('还没有记录');
+      openEditor(data.records[0]);
+    } catch (e) { toast(e.message, true); }
+  });
 
   // ---------- 历史记录 ----------
   async function loadHistory(reset) {
@@ -530,7 +548,7 @@ export function pageHtml(): string {
       + '<div class="time">' + hm(r.wake_time) + '<small>' + hm(r.sleep_time) + ' 睡</small></div>'
       + '<div class="body"><div>' + tags + '</div><div>' + sleep + '</div>'
       + (r.remark ? '<div class="remark">' + esc(r.remark) + '</div>' : '') + '</div>'
-      + '<div class="ops"><button class="link" data-edit="' + r.id + '">编辑</button></div>'
+      + '<div class="ops"><button class="edit-btn" data-edit="' + r.id + '">编辑</button></div>'
       + '</div></div>';
   }
 
