@@ -181,12 +181,16 @@ router.delete('/records/:id', async (c) => {
 router.get('/stats', async (c) => {
   const days = clampInt(c.req.query('days'), 1, 90, 7)
   const tz = clampInt(c.req.query('tz'), -840, 840, 480)
+  const dayMode = c.req.query('mode') === 'cross' ? 'cross' : 'natural'
   const offset = tz * MINUTE
   const now = Date.now()
   const todayStart = Math.floor((now + offset) / DAY) * DAY - offset
-  // “今天”统计当天；多日统计只取已经结束的完整自然日，避免当天未完整造成偏差
-  const rangeEnd = days === 1 ? todayStart + DAY : todayStart
-  const rangeStart = days === 1 ? todayStart : rangeEnd - days * DAY
+  // 自然日从 00:00 开始；跨日从 07:00 开始。多日统计只取已经结束的完整周期。
+  const periodStart = dayMode === 'cross'
+    ? Math.floor((now + offset - DAYTIME_START) / DAY) * DAY - offset + DAYTIME_START
+    : todayStart
+  const rangeEnd = days === 1 ? periodStart + DAY : periodStart
+  const rangeStart = days === 1 ? periodStart : rangeEnd - days * DAY
 
   // 区间内的记录 + 区间开始前、睡眠跨入区间的那条记录
   const [{ results: rows }, { results: fedRows }, last] = await Promise.all([
@@ -255,10 +259,12 @@ router.get('/stats', async (c) => {
       const b = buckets[i]
       if (b) {
         const duration = segEnd - s
-        const dayStart = rangeStart + i * DAY
+        const bucketStart = rangeStart + i * DAY
+        const daytimeStart = dayMode === 'cross' ? bucketStart : bucketStart + DAYTIME_START
+        const daytimeEnd = dayMode === 'cross' ? bucketStart + (DAYTIME_END - DAYTIME_START) : bucketStart + DAYTIME_END
         const daytimeMs = Math.max(
           0,
-          Math.min(segEnd, dayStart + DAYTIME_END) - Math.max(s, dayStart + DAYTIME_START),
+          Math.min(segEnd, daytimeEnd) - Math.max(s, daytimeStart),
         )
         b.sleepMs += duration
         b.daySleepMs += daytimeMs
@@ -327,7 +333,7 @@ router.get('/stats', async (c) => {
   return c.json({
     code: 200,
     msg: 'ok',
-    data: { rangeStart, rangeEnd, now, daily, summary, last: last ?? null },
+    data: { rangeStart, rangeEnd, now, dayMode, daily, summary, last: last ?? null },
   })
 })
 

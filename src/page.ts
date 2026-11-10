@@ -213,6 +213,14 @@ export function pageHtml(): string {
   </section>
 
   <section id="tab-stats" hidden>
+    <div class="field">
+      <span>统计口径</span>
+      <div class="seg" id="modeSeg">
+        <button type="button" data-mode="natural" class="active">自然日</button>
+        <button type="button" data-mode="cross">跨日（07:00）</button>
+      </div>
+      <div class="hint" id="modeHint">按 00:00 至次日 00:00 统计</div>
+    </div>
     <div class="seg" id="rangeSeg" style="margin-bottom:12px">
       <button type="button" data-days="1">今天</button>
       <button type="button" data-days="7" class="active">7天</button>
@@ -253,7 +261,7 @@ export function pageHtml(): string {
   var TOKEN_KEY = 'feeding_api_token';
   var TYPE_NAME = { breast: '母乳', formula: '奶粉', mixed: '混合' };
   var SIDE_NAME = { left: '左边', right: '右边', both: '两边' };
-  var state = { isFed: true, type: 'breast', side: null, editingId: null, records: [], hasMore: false, days: 7, tab: 'entry', historyLoaded: false };
+  var state = { isFed: true, type: 'breast', side: null, editingId: null, records: [], hasMore: false, days: 7, dayMode: 'natural', tab: 'entry', historyLoaded: false };
 
   function $(id) { return document.getElementById(id); }
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -645,6 +653,16 @@ export function pageHtml(): string {
   $('detailEdit').addEventListener('click', function () { var id = detailId; hideDetail(); editRecord(id); });
 
   // ---------- 统计 ----------
+  document.querySelectorAll('#modeSeg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.dayMode = b.getAttribute('data-mode');
+      document.querySelectorAll('#modeSeg button').forEach(function (x) { x.classList.toggle('active', x === b); });
+      $('modeHint').textContent = state.dayMode === 'cross'
+        ? '按 07:00 至次日 07:00 统计，夜间归入开始日期'
+        : '按 00:00 至次日 00:00 统计';
+      loadStats();
+    });
+  });
   document.querySelectorAll('#rangeSeg button').forEach(function (b) {
     b.addEventListener('click', function () {
       state.days = Number(b.getAttribute('data-days'));
@@ -655,7 +673,7 @@ export function pageHtml(): string {
 
   async function loadStats() {
     try {
-      var data = await api('/api/stats?days=' + state.days + '&tz=' + (-new Date().getTimezoneOffset()));
+      var data = await api('/api/stats?days=' + state.days + '&tz=' + (-new Date().getTimezoneOffset()) + '&mode=' + state.dayMode);
       renderStats(data);
     } catch (e) { toast(e.message, true); }
   }
