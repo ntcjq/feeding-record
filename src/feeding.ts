@@ -28,7 +28,7 @@ type RecordRow = {
 
 type RecordWithNext = RecordRow & { next_wake_time: number | null }
 
-type RecordInput = Omit<RecordRow, 'id' | 'created_at' | 'updated_at'>
+type RecordInput = Omit<RecordRow, 'id' | 'feed_minutes' | 'created_at' | 'updated_at'>
 
 type DayStat = {
   date: string
@@ -38,7 +38,6 @@ type DayStat = {
   formulaCount: number
   mixedCount: number
   formulaMl: number
-  feedMinutes: number
   diaperCount: number
   poopCount: number
   sleepMinutes: number
@@ -106,13 +105,6 @@ function parseInput(body: unknown): RecordInput | string {
   const formulaMl = !isFed || feedType === 'breast' ? 0 : Number(b.formula_ml ?? 0)
   if (!Number.isFinite(formulaMl) || formulaMl < 0 || formulaMl > 1000) return '奶粉量无效'
 
-  let feedMinutes: number | null = null
-  if (isFed && b.feed_minutes !== null && b.feed_minutes !== undefined && b.feed_minutes !== '') {
-    feedMinutes = Number(b.feed_minutes)
-    if (!Number.isFinite(feedMinutes) || feedMinutes < 0 || feedMinutes > 600) return '喂养时长无效'
-    feedMinutes = Math.round(feedMinutes)
-  }
-
   const remark = typeof b.remark === 'string' ? b.remark.trim().slice(0, 200) : ''
 
   return {
@@ -121,7 +113,6 @@ function parseInput(body: unknown): RecordInput | string {
     feed_type: feedType as FeedType,
     breast_side: breastSide,
     formula_ml: Math.round(formulaMl),
-    feed_minutes: feedMinutes,
     diaper_changed: b.diaper_changed ? 1 : 0,
     pooped: b.pooped ? 1 : 0,
     sleep_time: sleepTime,
@@ -145,10 +136,10 @@ router.post('/records', async (c) => {
   if (typeof input === 'string') return c.json({ code: 400, msg: input }, 400)
 
   const row = await c.env.DB.prepare(
-    `INSERT INTO feeding_records (wake_time, is_fed, feed_type, breast_side, formula_ml, feed_minutes, diaper_changed, pooped, sleep_time, remark)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
+    `INSERT INTO feeding_records (wake_time, is_fed, feed_type, breast_side, formula_ml, diaper_changed, pooped, sleep_time, remark)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
   )
-    .bind(input.wake_time, input.is_fed, input.feed_type, input.breast_side, input.formula_ml, input.feed_minutes, input.diaper_changed, input.pooped, input.sleep_time, input.remark)
+    .bind(input.wake_time, input.is_fed, input.feed_type, input.breast_side, input.formula_ml, input.diaper_changed, input.pooped, input.sleep_time, input.remark)
     .first<{ id: number }>()
   return c.json({ code: 200, msg: '保存成功', data: { id: row?.id } })
 })
@@ -160,10 +151,10 @@ router.put('/records/:id', async (c) => {
   if (typeof input === 'string') return c.json({ code: 400, msg: input }, 400)
 
   const res = await c.env.DB.prepare(
-    `UPDATE feeding_records SET wake_time = ?, is_fed = ?, feed_type = ?, breast_side = ?, formula_ml = ?, feed_minutes = ?, diaper_changed = ?,
+    `UPDATE feeding_records SET wake_time = ?, is_fed = ?, feed_type = ?, breast_side = ?, formula_ml = ?, diaper_changed = ?,
        pooped = ?, sleep_time = ?, remark = ?, updated_at = datetime('now') WHERE id = ?`
   )
-    .bind(input.wake_time, input.is_fed, input.feed_type, input.breast_side, input.formula_ml, input.feed_minutes, input.diaper_changed, input.pooped, input.sleep_time, input.remark, id)
+    .bind(input.wake_time, input.is_fed, input.feed_type, input.breast_side, input.formula_ml, input.diaper_changed, input.pooped, input.sleep_time, input.remark, id)
     .run()
   if (!res.meta.changes) return c.json({ code: 404, msg: '记录不存在' }, 404)
   return c.json({ code: 200, msg: '更新成功', data: { id } })
@@ -213,7 +204,6 @@ router.get('/stats', async (c) => {
     formulaCount: 0,
     mixedCount: 0,
     formulaMl: 0,
-    feedMinutes: 0,
     diaperCount: 0,
     poopCount: 0,
     sleepMs: 0,
@@ -236,7 +226,6 @@ router.get('/stats', async (c) => {
           else if (r.feed_type === 'formula') b.formulaCount++
           else b.mixedCount++
           b.formulaMl += r.formula_ml
-          b.feedMinutes += r.feed_minutes ?? 0
         }
         b.diaperCount += r.diaper_changed
         b.poopCount += r.pooped
@@ -291,7 +280,6 @@ router.get('/stats', async (c) => {
     formulaCount: b.formulaCount,
     mixedCount: b.mixedCount,
     formulaMl: b.formulaMl,
-    feedMinutes: b.feedMinutes,
     diaperCount: b.diaperCount,
     poopCount: b.poopCount,
     sleepMinutes: Math.round(b.sleepMs / MINUTE),
@@ -318,7 +306,6 @@ router.get('/stats', async (c) => {
     totalFormulaMl: sum('formulaMl'),
     avgFeedCount: avg('feedCount'),
     avgFormulaMl: avg('formulaMl'),
-    avgFeedMinutes: avg('feedMinutes'),
     avgSleepMinutes: avg('sleepMinutes'),
     avgDaySleepMinutes: avg('daySleepMinutes'),
     avgNightSleepMinutes: avg('nightSleepMinutes'),

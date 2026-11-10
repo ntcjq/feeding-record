@@ -76,9 +76,6 @@ export function pageHtml(): string {
   .dt input::-webkit-datetime-edit-minute-field:focus, .dt input::-webkit-datetime-edit-ampm-field:focus {
     background: var(--primary-soft); color: var(--primary); border-radius: 4px; outline: none; }
   ::selection { background: var(--primary-soft); color: var(--primary); }
-  .stepper { display: flex; gap: 8px; }
-  .stepper input { flex: 1; text-align: center; font-size: 18px; font-weight: 700; }
-  .stepper button { width: 56px; flex: none; border: 1px solid var(--line); background: #fff; border-radius: 10px; font-size: 16px; font-weight: 700; color: var(--primary); cursor: pointer; }
   .toggles { display: flex; gap: 10px; margin-bottom: 14px; }
   .toggle { flex: 1; cursor: pointer; }
   .toggle input { display: none; }
@@ -139,7 +136,7 @@ export function pageHtml(): string {
   .toast.show { opacity: 1; }
   .toast.error { background: #e5484d; }
   .footer { text-align: center; margin-top: 20px; }
-  @media (hover: hover) { button:active { opacity: 1; } .chips button:hover, .stepper button:hover { border-color: var(--primary); } }
+  @media (hover: hover) { button:active { opacity: 1; } .chips button:hover { border-color: var(--primary); } }
   @media (min-width: 560px) { .grid { grid-template-columns: repeat(4, 1fr); } }
   @media (min-width: 680px) { .tabs { left: 50%; right: auto; width: 640px; margin-left: -320px; border: 1px solid var(--line); border-bottom: 0; border-radius: 14px 14px 0 0; } }
 </style>
@@ -186,14 +183,6 @@ export function pageHtml(): string {
         <div class="field" id="mlRow"><span>奶粉量 (ml)</span>
           <input type="number" id="formulaMl" min="0" max="1000" step="5" inputmode="numeric" />
           <div class="chips" data-target="formulaMl"><button type="button">30</button><button type="button">60</button><button type="button">90</button><button type="button">120</button><button type="button">150</button><button type="button">180</button></div>
-        </div>
-        <div class="field"><span>喂养时长 (分钟)</span>
-          <div class="stepper" data-target="feedMinutes">
-            <button type="button" data-step="-1">-1</button>
-            <input type="number" id="feedMinutes" min="0" max="600" inputmode="numeric" placeholder="可选" />
-            <button type="button" data-step="1">+1</button>
-          </div>
-          <div class="chips" data-target="feedMinutes"><button type="button">5</button><button type="button">10</button><button type="button">15</button><button type="button">20</button><button type="button">25</button><button type="button">30</button><button type="button">40</button></div>
         </div>
       </div>
       <div class="toggles">
@@ -365,15 +354,6 @@ export function pageHtml(): string {
       $(box.getAttribute('data-target')).value = e.target.textContent;
     });
   });
-  document.querySelectorAll('.stepper').forEach(function (box) {
-    box.addEventListener('click', function (e) {
-      var step = Number(e.target.getAttribute('data-step'));
-      if (!step) return;
-      var input = $(box.getAttribute('data-target'));
-      var v = (Number(input.value) || 0) + step;
-      input.value = String(Math.min(Math.max(v, Number(input.min)), Number(input.max)));
-    });
-  });
   // 拉臭臭必然换尿不湿
   $('poop').addEventListener('change', function () { if ($('poop').checked) $('diaper').checked = true; });
 
@@ -395,7 +375,6 @@ export function pageHtml(): string {
     setFed(true);
     setType('breast');
     setSide(null);
-    $('feedMinutes').value = '10';
     $('diaper').checked = true;
     $('poop').checked = false;
     $('remark').value = '';
@@ -415,7 +394,6 @@ export function pageHtml(): string {
     setType(r.feed_type);
     setSide(r.breast_side || null);
     $('formulaMl').value = String(r.formula_ml);
-    $('feedMinutes').value = r.feed_minutes == null ? '' : String(r.feed_minutes);
     $('diaper').checked = !!r.diaper_changed;
     $('poop').checked = !!r.pooped;
     $('remark').value = r.remark || '';
@@ -448,7 +426,6 @@ export function pageHtml(): string {
       feed_type: state.type,
       breast_side: state.type === 'formula' ? null : state.side,
       formula_ml: Number($('formulaMl').value || 0),
-      feed_minutes: $('feedMinutes').value === '' ? null : Number($('feedMinutes').value),
       diaper_changed: $('diaper').checked,
       pooped: $('poop').checked,
       sleep_time: getDT('sleepTime'),
@@ -544,7 +521,6 @@ export function pageHtml(): string {
     var tags = r.is_fed ? '<span class="tag pink">' + TYPE_NAME[r.feed_type] + '</span>' : '<span class="tag">未喂养</span>';
     if (r.is_fed && r.breast_side) tags += '<span class="tag pink">' + SIDE_NAME[r.breast_side] + '</span>';
     if (r.is_fed && r.formula_ml) tags += '<span class="tag blue">' + r.formula_ml + 'ml</span>';
-    if (r.is_fed && r.feed_minutes != null) tags += '<span class="tag">喂 ' + r.feed_minutes + ' 分钟</span>';
     if (r.diaper_changed) tags += '<span class="tag green">换尿布</span>';
     if (r.pooped) tags += '<span class="tag amber">臭臭</span>';
     var sleep;
@@ -625,7 +601,6 @@ export function pageHtml(): string {
       html += kv('喂养方式', TYPE_NAME[r.feed_type]);
       if (r.feed_type !== 'formula') html += kv('母乳喂养侧', r.breast_side ? SIDE_NAME[r.breast_side] : '未记录');
       if (r.feed_type !== 'breast') html += kv('奶粉量', r.formula_ml + ' ml');
-      html += kv('喂养时长', r.feed_minutes != null ? r.feed_minutes + ' 分钟' : '未记录');
     }
     html += kv('换尿不湿', r.diaper_changed ? '是' : '否')
       + kv('拉臭臭', r.pooped ? '是' : '否')
@@ -688,7 +663,6 @@ export function pageHtml(): string {
     { key: 'daySleepMinutes', label: '白天睡眠时长', color: '#f2a93b', fmt: dur },
     { key: 'nightSleepMinutes', label: '夜间睡眠时长', color: '#6474c8', fmt: dur },
     { key: 'longestSleepMinutes', label: '最长连续睡眠', color: '#a78bfa', fmt: dur },
-    { key: 'feedMinutes', label: '喂养时长', color: '#ff9f80', fmt: dur },
     { key: 'avgIntervalMinutes', label: '平均喂奶间隔', color: '#4fb6c4', fmt: dur },
     { key: 'diaperCount', label: '换尿不湿', color: 'var(--green)', fmt: function (v) { return v + ' 次'; } },
     { key: 'poopCount', label: '拉臭臭', color: 'var(--amber)', fmt: function (v) { return v + ' 次'; } }
@@ -709,7 +683,6 @@ export function pageHtml(): string {
       + metric(p + '总睡眠', dur(s.avgSleepMinutes), '')
       + metric(p + '白天睡眠', dur(s.avgDaySleepMinutes), '')
       + metric(p + '夜间睡眠', dur(s.avgNightSleepMinutes), '')
-      + metric(p + '喂养时长', dur(s.avgFeedMinutes), '')
       + metric(p + '换尿不湿', s.avgDiaperCount, '次')
       + metric(p + '拉臭臭', s.avgPoopCount, '次')
       + metric('平均喂奶间隔', dur(s.avgIntervalMinutes), '')
