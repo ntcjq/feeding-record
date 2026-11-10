@@ -214,7 +214,6 @@ export function pageHtml(): string {
 
   <section id="tab-stats" hidden>
     <div class="field">
-      <span>统计口径</span>
       <div class="seg" id="modeSeg">
         <button type="button" data-mode="natural" class="active">自然日</button>
         <button type="button" data-mode="cross">跨日（07:00）</button>
