@@ -667,7 +667,9 @@ export function pageHtml(): string {
   var CHARTS = [
     { key: 'feedCount', label: '喂奶次数', color: 'var(--primary)', fmt: function (v) { return v + ' 次'; } },
     { key: 'formulaMl', label: '奶粉量', color: 'var(--blue)', fmt: function (v) { return v + ' ml'; } },
-    { key: 'sleepMinutes', label: '睡眠时长', color: '#8b7cf6', fmt: dur },
+    { key: 'sleepMinutes', label: '总睡眠时长', color: '#8b7cf6', fmt: dur },
+    { key: 'daySleepMinutes', label: '白天睡眠时长', color: '#f2a93b', fmt: dur },
+    { key: 'nightSleepMinutes', label: '夜间睡眠时长', color: '#6474c8', fmt: dur },
     { key: 'longestSleepMinutes', label: '最长连续睡眠', color: '#a78bfa', fmt: dur },
     { key: 'feedMinutes', label: '喂养时长', color: '#ff9f80', fmt: dur },
     { key: 'avgIntervalMinutes', label: '平均喂奶间隔', color: '#4fb6c4', fmt: dur },
@@ -687,7 +689,9 @@ export function pageHtml(): string {
     $('summary').innerHTML = '<div class="grid">'
       + metric(p + '喂奶', s.avgFeedCount, '次')
       + metric(p + '奶粉', s.avgFormulaMl, 'ml')
-      + metric(p + '睡眠', dur(s.avgSleepMinutes), '')
+      + metric(p + '总睡眠', dur(s.avgSleepMinutes), '')
+      + metric(p + '白天睡眠', dur(s.avgDaySleepMinutes), '')
+      + metric(p + '夜间睡眠', dur(s.avgNightSleepMinutes), '')
       + metric(p + '喂养时长', dur(s.avgFeedMinutes), '')
       + metric(p + '换尿不湿', s.avgDiaperCount, '次')
       + metric(p + '拉臭臭', s.avgPoopCount, '次')

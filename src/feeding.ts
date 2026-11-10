@@ -42,12 +42,16 @@ type DayStat = {
   diaperCount: number
   poopCount: number
   sleepMinutes: number
+  daySleepMinutes: number
+  nightSleepMinutes: number
   longestSleepMinutes: number
   avgIntervalMinutes: number
 }
 
 const MINUTE = 60_000
 const DAY = 24 * 60 * MINUTE
+const DAYTIME_START = 7 * 60 * MINUTE
+const DAYTIME_END = 19 * 60 * MINUTE
 
 // 用窗口函数取下一次醒来时间，用于计算本条记录的睡眠时长
 const SELECT_WITH_NEXT = `SELECT * FROM (
@@ -209,6 +213,8 @@ router.get('/stats', async (c) => {
     diaperCount: 0,
     poopCount: 0,
     sleepMs: 0,
+    daySleepMs: 0,
+    nightSleepMs: 0,
     longestSleepMs: 0,
     intervalMs: 0,
     intervalCount: 0,
@@ -247,7 +253,17 @@ router.get('/stats', async (c) => {
       const i = Math.floor((s - rangeStart) / DAY)
       const segEnd = Math.min(e, rangeStart + (i + 1) * DAY)
       const b = buckets[i]
-      if (b) b.sleepMs += segEnd - s
+      if (b) {
+        const duration = segEnd - s
+        const dayStart = rangeStart + i * DAY
+        const daytimeMs = Math.max(
+          0,
+          Math.min(segEnd, dayStart + DAYTIME_END) - Math.max(s, dayStart + DAYTIME_START),
+        )
+        b.sleepMs += duration
+        b.daySleepMs += daytimeMs
+        b.nightSleepMs += duration - daytimeMs
+      }
       s = segEnd
     }
   }
@@ -273,6 +289,8 @@ router.get('/stats', async (c) => {
     diaperCount: b.diaperCount,
     poopCount: b.poopCount,
     sleepMinutes: Math.round(b.sleepMs / MINUTE),
+    daySleepMinutes: Math.round(b.daySleepMs / MINUTE),
+    nightSleepMinutes: Math.round(b.nightSleepMs / MINUTE),
     longestSleepMinutes: Math.round(b.longestSleepMs / MINUTE),
     avgIntervalMinutes: b.intervalCount ? Math.round(b.intervalMs / b.intervalCount / MINUTE) : 0,
   }))
@@ -296,6 +314,8 @@ router.get('/stats', async (c) => {
     avgFormulaMl: avg('formulaMl'),
     avgFeedMinutes: avg('feedMinutes'),
     avgSleepMinutes: avg('sleepMinutes'),
+    avgDaySleepMinutes: avg('daySleepMinutes'),
+    avgNightSleepMinutes: avg('nightSleepMinutes'),
     avgDiaperCount: avg('diaperCount'),
     avgPoopCount: avg('poopCount'),
     avgIntervalMinutes: intervalCount
