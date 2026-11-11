@@ -528,7 +528,7 @@ export function pageHtml(): string {
     else if (r.sleep_time <= now) sleep = '睡眠中，已睡 ' + dur((now - r.sleep_time) / 60000);
     else sleep = '预计 ' + hm(r.sleep_time) + ' 入睡';
     return '<div class="swipe"><button class="del" data-del="' + r.id + '">删除</button><div class="rec" data-id="' + r.id + '">'
-      + '<div class="time">' + hm(r.wake_time) + '<small>' + hm(r.sleep_time) + ' 睡</small></div>'
+      + '<div class="time">' + hm(r.sleep_time) + '<small>' + hm(r.wake_time) + ' 醒</small></div>'
       + '<div class="body"><div>' + tags + '</div><div>' + sleep + '</div>'
       + (r.remark ? '<div class="remark">' + esc(r.remark) + '</div>' : '') + '</div>'
       + '<div class="ops"><button class="edit-btn" data-edit="' + r.id + '">编辑</button></div>'
