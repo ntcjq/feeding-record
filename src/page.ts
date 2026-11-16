@@ -100,6 +100,11 @@ export function pageHtml(): string {
   .rec .ops { display: flex; flex-direction: column; justify-content: center; }
   .edit-btn { min-width: 52px; height: 34px; padding: 0 12px; border: 1px solid #ffc7d3; border-radius: 9px;
     background: var(--primary-soft); color: var(--primary); font-size: 14px; font-weight: 700; cursor: pointer; }
+  .sleep-row { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px;
+    background: linear-gradient(90deg, #f3efff, #eef3ff); color: #6f63bd; font-size: 13px; }
+  .sleep-row::before, .sleep-row::after { content: ""; flex: 1; height: 1px; background: #d9d2fa; }
+  .sleep-row b { font-size: 14px; }
+  .sleep-row small { color: #8b82bd; font-size: 12px; white-space: nowrap; }
   .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; margin-right: 4px; background: #f3eef0; color: var(--muted); }
   .tag.pink { background: var(--primary-soft); color: var(--primary); }
   .tag.blue { background: #e6eefc; color: var(--blue); }
@@ -523,13 +528,19 @@ export function pageHtml(): string {
     if (r.is_fed && r.formula_ml) tags += '<span class="tag blue">' + r.formula_ml + 'ml</span>';
     if (r.diaper_changed) tags += '<span class="tag green">换尿布</span>';
     if (r.pooped) tags += '<span class="tag amber">臭臭</span>';
-    var sleep;
-    if (r.next_wake_time != null) sleep = '睡眠 ' + dur((r.next_wake_time - r.sleep_time) / 60000) + '（至 ' + hm(r.next_wake_time) + '）';
-    else if (r.sleep_time <= now) sleep = '睡眠中，已睡 ' + dur((now - r.sleep_time) / 60000);
-    else sleep = '预计 ' + hm(r.sleep_time) + ' 入睡';
-    return '<div class="swipe"><button class="del" data-del="' + r.id + '">删除</button><div class="rec" data-id="' + r.id + '">'
+    var sleepRow = '';
+    var currentSleep = '';
+    if (r.next_wake_time != null) {
+      sleepRow = '<div class="sleep-row"><span>睡眠 <b>' + dur((r.next_wake_time - r.sleep_time) / 60000)
+        + '</b></span><small>' + hm(r.sleep_time) + ' → ' + hm(r.next_wake_time) + '</small></div>';
+    } else if (r.sleep_time <= now) {
+      currentSleep = '睡眠中，已睡 ' + dur((now - r.sleep_time) / 60000);
+    } else {
+      currentSleep = '预计 ' + hm(r.sleep_time) + ' 入睡';
+    }
+    return sleepRow + '<div class="swipe"><button class="del" data-del="' + r.id + '">删除</button><div class="rec" data-id="' + r.id + '">'
       + '<div class="time">' + hm(r.sleep_time) + '<small>' + hm(r.wake_time) + ' 醒</small></div>'
-      + '<div class="body"><div>' + tags + '</div><div>' + sleep + '</div>'
+      + '<div class="body"><div>' + tags + '</div>' + (currentSleep ? '<div>' + currentSleep + '</div>' : '')
       + (r.remark ? '<div class="remark">' + esc(r.remark) + '</div>' : '') + '</div>'
       + '<div class="ops"><button class="edit-btn" data-edit="' + r.id + '">编辑</button></div>'
       + '</div></div>';
