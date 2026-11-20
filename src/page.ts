@@ -472,8 +472,8 @@ export function pageHtml(): string {
     $('statusCard').classList.toggle('editable', !!last);
     if (!last) { $('statusCard').innerHTML = '还没有记录，快来添加第一条吧'; return; }
     var html = '上次醒来 <b>' + hm(last.wake_time) + '</b>（' + dur((now - last.wake_time) / 60000) + '前）';
-    if (last.sleep_time <= now) html += '<br>已睡 <b>' + dur((now - last.sleep_time) / 60000) + '</b>（' + hm(last.sleep_time) + ' 入睡）';
-    else html += '<br>预计 ' + hm(last.sleep_time) + ' 入睡';
+    if (last.sleep_time <= now) html += '<br>已睡 <b>' + dur((now - last.sleep_time) / 60000) + '</b>（<b>' + hm(last.sleep_time) + '</b> 入睡）';
+    else html += '<br>预计 <b>' + hm(last.sleep_time) + '</b> 入睡';
     var t = data.daily[data.daily.length - 1];
     if (t) {
       html += '<span class="sub">今日：喂奶 ' + t.feedCount + ' 次 · 奶粉 ' + t.formulaMl + 'ml · 睡眠 ' + dur(t.sleepMinutes)
